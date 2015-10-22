@@ -6,6 +6,7 @@ import json
 import requests
 from collections import OrderedDict
 import logging
+import copy
 
 #############################################
 # is_valid_registration_notification
@@ -41,26 +42,29 @@ def is_valid_registration_notification(payload, clientSecret=None):
     jiveSignatureURL = payload['jiveSignatureURL']
     jiveSignature = payload['jiveSignature']
     
+    # MAKING A COPY
+    data_json = copy.deepcopy(payload)
+    
     # REMOVE JIVE SIGNATURE FROM PAYLOAD
-    payload.pop('jiveSignature')
+    data_json.pop('jiveSignature')
         
     # IS THERE AN EXISTING clientSecret OUTSIDE OF THE PAYLOAD
     if not clientSecret:        
         # THEN WE ARE A REGISTER EVENT
-        if not payload['clientSecret']:
+        if not data_json['clientSecret']:
             logging.warn("Registration Event with no Secret, Invalid Payload")
             return False
         else:
-            payload['clientSecret'] = hashlib.sha256(payload['clientSecret']).hexdigest()
+            data_json['clientSecret'] = hashlib.sha256(data_json['clientSecret']).hexdigest()
     else:
         if 'clientSecret' in payload:
             logging.warn("Client Secret already in payload, ignoring argument.  Make sure you are not passing in clientId on register events")
         else:
-            payload['clientSecret'] = clientSecret
+            data_json['clientSecret'] = clientSecret
         
     # COMPILING THE BODY TO SEND TO THE MARKET TO VALIDATE
     data = ''
-    for k,v in sorted(OrderedDict(payload).items()):
+    for k,v in sorted(OrderedDict(data_json).items()):
         data += k + ":" + v +"\n"
     
     logging.debug("Signature Validation URL: [%s]", jiveSignatureURL)
